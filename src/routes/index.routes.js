@@ -17,6 +17,8 @@ import paymentRoutes from "../modules/payments/payment.routes.js";
 import companyRoutes from "../modules/company/company.routes.js";
 import pdfRoutes from "../modules/pdfs/pdf.routes.js";
 import auditLogRoutes from "../modules/audit-logs/audit-log.routes.js";
+import chatRoutes from "../modules/internal-chat/chat.routes.js";
+import botRoutes from "../modules/bot/bot.routes.js";
 
 const routes = Router();
 
@@ -44,5 +46,7 @@ routes.use("/payments", paymentRoutes);
 routes.use("/company", companyRoutes);
 routes.use("/pdfs", pdfRoutes);
 routes.use("/audit-logs", auditLogRoutes);
+routes.use("/internal-chat", chatRoutes);
+routes.use("/bot", botRoutes);
 
 export default routes;
