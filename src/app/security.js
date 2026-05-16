@@ -13,7 +13,34 @@ export function setupSecurity(app) {
 
   app.use(
     helmet({
-      crossOriginResourcePolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://static.cloudflareinsights.com",
+          ],
+          scriptSrcElem: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://static.cloudflareinsights.com",
+          ],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+          ],
+          imgSrc: [
+            "'self'",
+            "data:",
+          ],
+          connectSrc: [
+            "'self'",
+            "https://api.wantech.space",
+            "wss://api.wantech.space",
+          ],
+        },
+      },
     })
   );
 
