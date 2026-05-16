@@ -29,6 +29,14 @@ routes.get("/", (req, res) => {
   });
 });
 
+routes.get("/health", (req, res) => {
+  return res.json({
+    status: "ok",
+    service: "assistencia-api",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 routes.use("/auth", authRoutes);
 routes.use("/users", userRoutes);
 routes.use("/clients", clientRoutes);
