@@ -31,11 +31,11 @@ const paymentOutputSchema = z.object({
 
   notes: z.string().nullable().optional(),
 
-  gateway: payment.gateway,
-  gatewayPaymentId: payment.gatewayPaymentId,
-  gatewayPreferenceId: payment.gatewayPreferenceId,
-  checkoutUrl: payment.checkoutUrl,
-  externalReference: payment.externalReference,
+  gateway: z.string().nullable().optional(),
+  gatewayPaymentId: z.string().nullable().optional(),
+  gatewayPreferenceId: z.string().nullable().optional(),
+  checkoutUrl: z.string().nullable().optional(),
+  externalReference: z.string().nullable().optional(),
 
   receivedBy: receivedBySchema,
 
@@ -74,13 +74,13 @@ export function paymentDTO(payment) {
 
     notes: payment.notes || null,
 
-    receivedBy: receivedByDTO(payment.receivedBy),
+    gateway: payment.gateway || null,
+    gatewayPaymentId: payment.gatewayPaymentId || null,
+    gatewayPreferenceId: payment.gatewayPreferenceId || null,
+    checkoutUrl: payment.checkoutUrl || null,
+    externalReference: payment.externalReference || null,
 
-    gateway: payment.gateway,
-    gatewayPaymentId: payment.gatewayPaymentId,
-    gatewayPreferenceId: payment.gatewayPreferenceId,
-    checkoutUrl: payment.checkoutUrl,
-    externalReference: payment.externalReference,
+    receivedBy: receivedByDTO(payment.receivedBy),
 
     isActive: payment.isActive,
 
