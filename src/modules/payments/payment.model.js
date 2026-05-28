@@ -47,6 +47,32 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
     },
 
+    gateway: {
+      type: String,
+      enum: ["MANUAL", "MERCADO_PAGO"],
+      default: "MANUAL",
+    },
+
+    gatewayPaymentId: {
+      type: String,
+    },
+
+    gatewayPreferenceId: {
+      type: String,
+    },
+
+    checkoutUrl: {
+      type: String,
+    },
+
+    externalReference: {
+      type: String,
+    },
+
+    gatewayRawResponse: {
+      type: Object,
+    },
+
     receivedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

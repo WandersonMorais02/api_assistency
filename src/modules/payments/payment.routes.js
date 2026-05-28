@@ -6,6 +6,7 @@ import {
   show,
   update,
   remove,
+  mercadoPagoWebhook,
 } from "./payment.controller.js";
 
 import { validate } from "../../core/middlewares/validate.middleware.js";
@@ -252,5 +253,7 @@ paymentRoutes.delete(
   validate(paymentIdSchema),
   remove
 );
+
+paymentRoutes.post("/mercado-pago/webhook", mercadoPagoWebhook);
 
 export default paymentRoutes;

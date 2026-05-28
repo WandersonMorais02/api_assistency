@@ -4,7 +4,9 @@ import {
   findPaymentById,
   updatePayment,
   deletePayment,
+  syncMercadoPagoPayment,
 } from "./payment.service.js";
+
 
 export async function create(req, res, next) {
   try {
@@ -63,5 +65,30 @@ export async function remove(req, res, next) {
     return res.json(payment);
   } catch (error) {
     return next(error);
+  }
+}
+
+export async function mercadoPagoWebhook(req, res, next) {
+  try {
+    const paymentId =
+      req.body?.data?.id ||
+      req.query?.id ||
+      req.query?.["data.id"];
+
+    const topic =
+      req.body?.type ||
+      req.query?.topic;
+
+    if (topic && topic !== "payment") {
+      return res.status(200).json({ received: true });
+    }
+
+    if (paymentId) {
+      await syncMercadoPagoPayment(paymentId);
+    }
+
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    next(error);
   }
 }

@@ -31,6 +31,12 @@ const paymentOutputSchema = z.object({
 
   notes: z.string().nullable().optional(),
 
+  gateway: payment.gateway,
+  gatewayPaymentId: payment.gatewayPaymentId,
+  gatewayPreferenceId: payment.gatewayPreferenceId,
+  checkoutUrl: payment.checkoutUrl,
+  externalReference: payment.externalReference,
+
   receivedBy: receivedBySchema,
 
   isActive: z.boolean(),
@@ -69,6 +75,12 @@ export function paymentDTO(payment) {
     notes: payment.notes || null,
 
     receivedBy: receivedByDTO(payment.receivedBy),
+
+    gateway: payment.gateway,
+    gatewayPaymentId: payment.gatewayPaymentId,
+    gatewayPreferenceId: payment.gatewayPreferenceId,
+    checkoutUrl: payment.checkoutUrl,
+    externalReference: payment.externalReference,
 
     isActive: payment.isActive,
 

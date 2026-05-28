@@ -8,6 +8,11 @@ import { createAuditLog } from "../audit-logs/audit-log.service.js";
 import { AppError } from "../../core/errors/app-error.js";
 
 import {
+  createMercadoPagoPreference,
+  getMercadoPagoPayment,
+} from "./mercado-pago.service.js";
+
+import {
   getPaginationParams,
   buildPaginationResponse,
 } from "../../core/utils/pagination.js";
@@ -58,16 +63,52 @@ async function applyPaidStatusToRelatedEntity(payment) {
 export async function createPayment(data, userId) {
   await validateRelatedEntity(data.context, data.relatedTo);
 
+  const gateway = data.gateway || "MANUAL";
+
   const payment = await Payment.create({
     context: data.context,
     relatedTo: data.relatedTo,
     amount: data.amount,
     method: data.method,
-    status: data.status || "PENDING",
-    paidAt: data.status === "PAID" ? new Date() : undefined,
+    status:
+      gateway === "MERCADO_PAGO"
+        ? "PENDING"
+        : data.status || "PENDING",
+    paidAt:
+      gateway === "MANUAL" && data.status === "PAID"
+        ? new Date()
+        : undefined,
     notes: data.notes,
     receivedBy: userId,
+    gateway,
   });
+
+  if (gateway === "MERCADO_PAGO") {
+    const relatedEntity = await validateRelatedEntity(
+      data.context,
+      data.relatedTo
+    );
+
+    const title =
+      data.context === "SERVICE_ORDER"
+        ? `Pagamento da OS ${relatedEntity.protocol || payment._id}`
+        : `Pagamento do pedido ${relatedEntity._id}`;
+
+    const preference = await createMercadoPagoPreference({
+      payment,
+      title,
+      description: data.notes || title,
+    });
+
+    payment.gatewayPreferenceId = preference.id;
+    payment.checkoutUrl =
+      preference.init_point ||
+      preference.sandbox_init_point;
+    payment.externalReference = String(payment._id);
+    payment.gatewayRawResponse = preference;
+
+    await payment.save();
+  }
 
   await applyPaidStatusToRelatedEntity(payment);
 
@@ -93,6 +134,7 @@ export async function createPayment(data, userId) {
     metadata: {
       context: payment.context,
       relatedTo: String(payment.relatedTo),
+      gateway: payment.gateway,
     },
   });
 
@@ -269,4 +311,46 @@ export async function deletePayment(id, userId) {
   });
 
   return paymentDTO(payment);
+}
+
+function mapMercadoPagoStatus(status) {
+  if (status === "approved") return "PAID";
+  if (status === "pending" || status === "in_process") return "PENDING";
+  if (status === "rejected") return "FAILED";
+  if (status === "cancelled") return "CANCELED";
+  if (status === "refunded") return "REFUNDED";
+
+  return "PENDING";
+}
+
+export async function syncMercadoPagoPayment(mercadoPagoPaymentId) {
+  const mpPayment = await getMercadoPagoPayment(mercadoPagoPaymentId);
+
+  const externalReference =
+    mpPayment.external_reference ||
+    mpPayment.metadata?.paymentId ||
+    mpPayment.metadata?.payment_id;
+
+  if (!externalReference) {
+    throw new AppError("Pagamento sem referência externa", 400);
+  }
+
+  const payment = await Payment.findById(externalReference);
+
+  if (!payment) {
+    throw new AppError("Pagamento local não encontrado", 404);
+  }
+
+  payment.gatewayPaymentId = String(mpPayment.id);
+  payment.status = mapMercadoPagoStatus(mpPayment.status);
+  payment.gatewayRawResponse = mpPayment;
+
+  if (payment.status === "PAID" && !payment.paidAt) {
+    payment.paidAt = new Date();
+  }
+
+  await payment.save();
+  await applyPaidStatusToRelatedEntity(payment);
+
+  return findPaymentById(payment._id);
 }
