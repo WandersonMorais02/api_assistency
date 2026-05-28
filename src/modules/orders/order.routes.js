@@ -2,16 +2,19 @@ import { Router } from "express";
 
 import {
   create,
+  checkout,
   index,
   show,
   updateStatus,
   cancel,
+  mercadoPagoWebhook,
 } from "./order.controller.js";
 
 import { validate } from "../../core/middlewares/validate.middleware.js";
 
 import {
   createOrderSchema,
+  createCheckoutOrderSchema,
   updateOrderStatusSchema,
   orderIdSchema,
 } from "./order.schema.js";
@@ -34,7 +37,17 @@ const orderRoutes = Router();
  * @swagger
  * /api/orders:
  *   post:
- *     summary: Criar pedido
+ *     summary: Criar pedido manual
+ *     tags: [Orders]
+ *     security: []
+ */
+orderRoutes.post("/", validate(createOrderSchema), create);
+
+/**
+ * @swagger
+ * /api/orders/checkout:
+ *   post:
+ *     summary: Criar pedido e gerar checkout Mercado Pago
  *     tags: [Orders]
  *     security: []
  *     requestBody:
@@ -47,20 +60,51 @@ const orderRoutes = Router();
  *               - items
  *               - customerName
  *               - customerPhone
+ *               - customerEmail
+ *               - shippingAddress
  *             properties:
- *               client:
- *                 type: string
  *               customerName:
  *                 type: string
  *                 example: João Silva
  *               customerPhone:
  *                 type: string
- *                 example: 92999999999
+ *                 example: "92999999999"
  *               customerEmail:
  *                 type: string
  *                 example: joao@email.com
  *               notes:
  *                 type: string
+ *               shippingAddress:
+ *                 type: object
+ *                 required:
+ *                   - zipCode
+ *                   - street
+ *                   - number
+ *                   - neighborhood
+ *                   - city
+ *                   - state
+ *                 properties:
+ *                   zipCode:
+ *                     type: string
+ *                     example: "69000000"
+ *                   street:
+ *                     type: string
+ *                     example: Rua Exemplo
+ *                   number:
+ *                     type: string
+ *                     example: "123"
+ *                   complement:
+ *                     type: string
+ *                     example: Casa
+ *                   neighborhood:
+ *                     type: string
+ *                     example: Centro
+ *                   city:
+ *                     type: string
+ *                     example: Manaus
+ *                   state:
+ *                     type: string
+ *                     example: AM
  *               items:
  *                 type: array
  *                 items:
@@ -73,16 +117,43 @@ const orderRoutes = Router();
  *                       type: string
  *                     quantity:
  *                       type: integer
- *                       example: 2
+ *                       example: 1
  *     responses:
  *       201:
- *         description: Pedido criado com sucesso
+ *         description: Pedido criado e preferência Mercado Pago gerada
  *       400:
  *         description: Dados inválidos ou estoque insuficiente
  *       404:
  *         description: Produto não encontrado
  */
-orderRoutes.post("/", validate(createOrderSchema), create);
+orderRoutes.post(
+  "/checkout",
+  validate(createCheckoutOrderSchema),
+  checkout
+);
+
+/**
+ * @swagger
+ * /api/orders/mercado-pago/webhook:
+ *   post:
+ *     summary: Webhook Mercado Pago para atualizar pagamento do pedido
+ *     tags: [Orders]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           example: payment
+ *       - in: query
+ *         name: data.id
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Webhook recebido
+ */
+orderRoutes.post("/mercado-pago/webhook", mercadoPagoWebhook);
 
 /**
  * @swagger
@@ -92,43 +163,6 @@ orderRoutes.post("/", validate(createOrderSchema), create);
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           example: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           example: 10
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           example: PENDING
- *       - in: query
- *         name: paymentStatus
- *         schema:
- *           type: string
- *           example: PAID
- *       - in: query
- *         name: client
- *         schema:
- *           type: string
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *           example: João
- *     responses:
- *       200:
- *         description: Lista de pedidos retornada com sucesso
- *       401:
- *         description: Token inválido
- *       403:
- *         description: Acesso negado
  */
 orderRoutes.get(
   "/",
@@ -145,21 +179,6 @@ orderRoutes.get(
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Pedido encontrado
- *       401:
- *         description: Token inválido
- *       403:
- *         description: Acesso negado
- *       404:
- *         description: Pedido não encontrado
  */
 orderRoutes.get(
   "/:id",
@@ -177,38 +196,6 @@ orderRoutes.get(
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               status:
- *                 type: string
- *                 example: DELIVERED
- *               paymentStatus:
- *                 type: string
- *                 example: PAID
- *               notes:
- *                 type: string
- *     responses:
- *       200:
- *         description: Status atualizado com sucesso
- *       400:
- *         description: Dados inválidos
- *       401:
- *         description: Token inválido
- *       403:
- *         description: Acesso negado
- *       404:
- *         description: Pedido não encontrado
  */
 orderRoutes.patch(
   "/:id/status",
@@ -226,23 +213,6 @@ orderRoutes.patch(
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Pedido cancelado com sucesso
- *       400:
- *         description: Pedido já cancelado
- *       401:
- *         description: Token inválido
- *       403:
- *         description: Acesso negado
- *       404:
- *         description: Pedido não encontrado
  */
 orderRoutes.patch(
   "/:id/cancel",

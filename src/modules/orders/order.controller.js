@@ -1,9 +1,11 @@
 import {
   createOrder,
+  createCheckoutOrder,
   listOrders,
   findOrderById,
   updateOrderStatus,
   cancelOrder,
+  syncMercadoPagoOrderPayment,
 } from "./order.service.js";
 
 export async function create(req, res, next) {
@@ -14,6 +16,44 @@ export async function create(req, res, next) {
     );
 
     return res.status(201).json(order);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function checkout(req, res, next) {
+  try {
+    const order = await createCheckoutOrder(
+      req.validated.body,
+      req.user?.id || null
+    );
+
+    return res.status(201).json(order);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function mercadoPagoWebhook(req, res, next) {
+  try {
+    const paymentId =
+      req.body?.data?.id ||
+      req.query?.id ||
+      req.query?.["data.id"];
+
+    const topic =
+      req.body?.type ||
+      req.query?.topic;
+
+    if (topic && topic !== "payment") {
+      return res.status(200).json({ received: true });
+    }
+
+    if (paymentId) {
+      await syncMercadoPagoOrderPayment(paymentId);
+    }
+
+    return res.status(200).json({ received: true });
   } catch (error) {
     return next(error);
   }

@@ -4,6 +4,7 @@ import {
   create,
   index,
   show,
+  showBySlug,
   update,
   remove,
 } from "./product.controller.js";
@@ -14,6 +15,7 @@ import {
   createProductSchema,
   updateProductSchema,
   productIdSchema,
+  productSlugSchema,
 } from "./product.schema.js";
 
 import {
@@ -79,6 +81,31 @@ productRoutes.get("/", index);
 
 /**
  * @swagger
+ * /api/products/slug/{slug}:
+ *   get:
+ *     summary: Buscar produto por slug
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: iphone-13
+ *     responses:
+ *       200:
+ *         description: Produto encontrado
+ *       404:
+ *         description: Produto não encontrado
+ */
+productRoutes.get(
+  "/slug/:slug",
+  validate(productSlugSchema),
+  showBySlug
+);
+
+/**
+ * @swagger
  * /api/products/{id}:
  *   get:
  *     summary: Buscar produto por ID
@@ -134,6 +161,10 @@ productRoutes.get("/:id", validate(productIdSchema), show);
  *               condition:
  *                 type: string
  *                 example: USED
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *               isFeatured:
  *                 type: boolean
  *               isPublished:
@@ -191,9 +222,15 @@ productRoutes.post(
  *                 type: string
  *               condition:
  *                 type: string
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *               isFeatured:
  *                 type: boolean
  *               isPublished:
+ *                 type: boolean
+ *               isActive:
  *                 type: boolean
  *     responses:
  *       200:

@@ -35,6 +35,47 @@ const orderItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const shippingAddressSchema = new mongoose.Schema(
+  {
+    zipCode: {
+      type: String,
+      trim: true,
+    },
+
+    street: {
+      type: String,
+      trim: true,
+    },
+
+    number: {
+      type: String,
+      trim: true,
+    },
+
+    complement: {
+      type: String,
+      trim: true,
+    },
+
+    neighborhood: {
+      type: String,
+      trim: true,
+    },
+
+    city: {
+      type: String,
+      trim: true,
+    },
+
+    state: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+  },
+  { _id: false }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     client: {
@@ -60,6 +101,8 @@ const orderSchema = new mongoose.Schema(
       lowercase: true,
     },
 
+    shippingAddress: shippingAddressSchema,
+
     items: [orderItemSchema],
 
     total: {
@@ -70,14 +113,40 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["PENDING", "CONFIRMED", "PAID", "DELIVERED", "CANCELED"],
+      enum: ["PENDING", "CONFIRMED", "PAID", "PROCESSING", "DELIVERED", "CANCELED"],
       default: "PENDING",
     },
 
     paymentStatus: {
       type: String,
-      enum: ["PENDING", "PAID", "REFUNDED"],
+      enum: ["PENDING", "PAID", "FAILED", "REFUNDED", "CANCELED"],
       default: "PENDING",
+    },
+
+    gateway: {
+      type: String,
+      enum: ["MANUAL", "MERCADO_PAGO"],
+      default: "MANUAL",
+    },
+
+    gatewayPreferenceId: {
+      type: String,
+    },
+
+    gatewayPaymentId: {
+      type: String,
+    },
+
+    checkoutUrl: {
+      type: String,
+    },
+
+    externalReference: {
+      type: String,
+    },
+
+    gatewayRawResponse: {
+      type: Object,
     },
 
     notes: {

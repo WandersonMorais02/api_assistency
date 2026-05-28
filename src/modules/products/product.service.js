@@ -261,3 +261,18 @@ export async function deleteProduct(id, userId) {
 
   return productDTO(product);
 }
+
+export async function findProductBySlug(slug) {
+  const product = await Product.findOne({
+    slug,
+    isActive: true,
+  })
+    .populate("category", "name slug")
+    .populate("images");
+
+  if (!product) {
+    throw new AppError("Produto não encontrado", 404);
+  }
+
+  return productDTO(product);
+}

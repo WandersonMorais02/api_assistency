@@ -16,7 +16,11 @@ const categorySchema = z.object({
 const imageSchema = z.object({
   id: z.string(),
   url: z.string().optional(),
+  path: z.string().optional(),
+  filename: z.string().optional(),
+  originalName: z.string().optional(),
   mimetype: z.string().optional(),
+  mimeType: z.string().optional(),
   category: z.string().optional(),
   context: z.string().optional(),
 });
@@ -61,7 +65,11 @@ function imageDTO(image) {
   return removeEmptyFields({
     id: toId(image),
     url: image.url,
-    mimetype: image.mimetype,
+    path: image.path,
+    filename: image.filename,
+    originalName: image.originalName,
+    mimetype: image.mimetype || image.mimeType,
+    mimeType: image.mimeType || image.mimetype,
     category: image.category,
     context: image.context,
   });

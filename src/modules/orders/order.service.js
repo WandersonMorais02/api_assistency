@@ -14,19 +14,28 @@ import {
 
 import { paginatedDTO } from "../../core/dtos/paginated.dto.js";
 
-export async function createOrder(data, userId = null) {
-  if (data.client) {
-    const client = await Client.findById(data.client);
+import {
+  createOrderPreference,
+  getMercadoPagoPayment,
+} from "./mercado-pago-order.service.js";
 
-    if (!client) {
-      throw new AppError("Cliente não encontrado", 404);
-    }
+async function validateClient(clientId) {
+  if (!clientId) return null;
+
+  const client = await Client.findById(clientId);
+
+  if (!client) {
+    throw new AppError("Cliente não encontrado", 404);
   }
 
+  return client;
+}
+
+async function buildOrderItems(itemsData, userId = null) {
   const items = [];
   let total = 0;
 
-  for (const item of data.items) {
+  for (const item of itemsData) {
     const product = await Product.findOne({
       _id: item.product,
       isActive: true,
@@ -45,7 +54,6 @@ export async function createOrder(data, userId = null) {
     }
 
     const oldStock = product.stock;
-
     const unitPrice = product.promotionalPrice ?? product.price;
     const subtotal = unitPrice * item.quantity;
 
@@ -85,14 +93,26 @@ export async function createOrder(data, userId = null) {
     });
   }
 
+  return { items, total };
+}
+
+async function createOrderDocument(data, userId = null, options = {}) {
+  await validateClient(data.client);
+
+  const { items, total } = await buildOrderItems(data.items, userId);
+
   const order = await Order.create({
     client: data.client,
     customerName: data.customerName,
     customerPhone: data.customerPhone,
     customerEmail: data.customerEmail,
+    shippingAddress: data.shippingAddress,
     items,
     total,
     notes: data.notes,
+    gateway: options.gateway || "MANUAL",
+    paymentStatus: options.paymentStatus || "PENDING",
+    status: options.status || "PENDING",
   });
 
   await createAuditLog({
@@ -117,13 +137,62 @@ export async function createOrder(data, userId = null) {
     metadata: {
       customerName: order.customerName,
       customerPhone: order.customerPhone,
-      items: order.items.map(item => ({
+      gateway: order.gateway,
+      items: order.items.map((item) => ({
         product: String(item.product),
         name: item.name,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         subtotal: item.subtotal,
       })),
+    },
+  });
+
+  return order;
+}
+
+export async function createOrder(data, userId = null) {
+  const order = await createOrderDocument(data, userId, {
+    gateway: "MANUAL",
+  });
+
+  return findOrderById(order._id);
+}
+
+export async function createCheckoutOrder(data, userId = null) {
+  const order = await createOrderDocument(data, userId, {
+    gateway: "MERCADO_PAGO",
+    paymentStatus: "PENDING",
+    status: "PENDING",
+  });
+
+  const preference = await createOrderPreference(order);
+
+  order.gatewayPreferenceId = preference.id;
+  order.checkoutUrl = preference.init_point || preference.sandbox_init_point;
+  order.externalReference = String(order._id);
+  order.gatewayRawResponse = preference;
+
+  await order.save();
+
+  await createAuditLog({
+    action: "ORDER_CHECKOUT_CREATED",
+    entity: "Order",
+    entityId: order._id,
+    performedBy: userId,
+    changes: {
+      gatewayPreferenceId: {
+        from: null,
+        to: order.gatewayPreferenceId,
+      },
+      checkoutUrl: {
+        from: null,
+        to: order.checkoutUrl,
+      },
+    },
+    metadata: {
+      gateway: "MERCADO_PAGO",
+      total: order.total,
     },
   });
 
@@ -292,10 +361,6 @@ export async function cancelOrder(id, userId) {
             from: oldStock,
             to: product.stock,
           },
-          isPublished: {
-            from: product.isPublished,
-            to: product.isPublished,
-          },
         },
         metadata: {
           orderId: String(order._id),
@@ -310,6 +375,7 @@ export async function cancelOrder(id, userId) {
   const oldIsActive = order.isActive;
 
   order.status = "CANCELED";
+  order.paymentStatus = "CANCELED";
   order.isActive = false;
 
   await order.save();
@@ -333,6 +399,78 @@ export async function cancelOrder(id, userId) {
       customerName: order.customerName,
       customerPhone: order.customerPhone,
       total: order.total,
+    },
+  });
+
+  return findOrderById(order._id);
+}
+
+function mapMercadoPagoStatus(status) {
+  if (status === "approved") return "PAID";
+  if (status === "pending" || status === "in_process") return "PENDING";
+  if (status === "rejected") return "FAILED";
+  if (status === "cancelled") return "CANCELED";
+  if (status === "refunded") return "REFUNDED";
+
+  return "PENDING";
+}
+
+export async function syncMercadoPagoOrderPayment(mercadoPagoPaymentId) {
+  const mpPayment = await getMercadoPagoPayment(mercadoPagoPaymentId);
+
+  const externalReference =
+    mpPayment.external_reference ||
+    mpPayment.metadata?.orderId ||
+    mpPayment.metadata?.order_id;
+
+  if (!externalReference) {
+    throw new AppError("Pagamento sem referência externa", 400);
+  }
+
+  const order = await Order.findById(externalReference);
+
+  if (!order) {
+    throw new AppError("Pedido local não encontrado", 404);
+  }
+
+  const mappedStatus = mapMercadoPagoStatus(mpPayment.status);
+
+  order.gatewayPaymentId = String(mpPayment.id);
+  order.paymentStatus = mappedStatus;
+  order.gatewayRawResponse = mpPayment;
+
+  if (mappedStatus === "PAID") {
+    order.status = "PAID";
+  }
+
+  if (mappedStatus === "FAILED") {
+    order.status = "PENDING";
+  }
+
+  if (mappedStatus === "CANCELED") {
+    order.status = "CANCELED";
+  }
+
+  await order.save();
+
+  await createAuditLog({
+    action: "ORDER_PAYMENT_SYNCED",
+    entity: "Order",
+    entityId: order._id,
+    performedBy: null,
+    changes: {
+      paymentStatus: {
+        from: null,
+        to: order.paymentStatus,
+      },
+      gatewayPaymentId: {
+        from: null,
+        to: order.gatewayPaymentId,
+      },
+    },
+    metadata: {
+      gateway: "MERCADO_PAGO",
+      mercadoPagoPaymentId,
     },
   });
 
