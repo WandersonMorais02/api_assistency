@@ -12,6 +12,8 @@ import { emitNewMessage } from "../internal-chat/chat.events.js";
 
 import { AppError } from "../../core/errors/app-error.js";
 
+import { processBotMessage } from "../../core/bot/bot-engine.js";
+
 function createPublicToken() {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -28,6 +30,49 @@ async function findRoomByToken(token) {
   }
 
   return room;
+}
+
+async function createBotReply({ room, message, customer }) {
+  const botResult = await processBotMessage({
+    roomId: room._id,
+    message,
+    user: {
+      id: null,
+      name: customer?.name || "Cliente",
+      role: "CLIENT",
+    },
+  });
+
+  const botMessage = await ChatMessage.create({
+    room: room._id,
+    sender: null,
+    type: "BOT",
+    content: botResult.response,
+    attachments: [],
+    metadata: {
+      confidence: botResult.confidence,
+      intent: botResult.intent,
+      tokens: botResult.tokens || [],
+    },
+  });
+
+  room.lastMessage = botMessage._id;
+
+  if (botResult.shouldEscalate) {
+    room.status = "WAITING";
+  }
+
+  await room.save();
+
+  const populatedBotMessage = await populateMessage(botMessage._id);
+  const botDTO = chatMessageDTO(populatedBotMessage);
+
+  emitNewMessage(botDTO);
+
+  return {
+    botMessage: botDTO,
+    botResult,
+  };
 }
 
 async function populateRoom(roomId) {
@@ -84,10 +129,24 @@ export async function startPublicChat(data) {
 
   emitNewMessage(messageDTO);
 
+  const botReply = await createBotReply({
+    room,
+    message: data.message,
+    customer: {
+      name: data.name,
+      phone: data.phone,
+      email: data.email || null,
+    },
+  });
+
   return {
     token,
     room: chatRoomDTO(populatedRoom),
-    messages: [messageDTO],
+    messages: [
+      messageDTO,
+      botReply.botMessage,
+    ],
+    botResult: botReply.botResult,
   };
 }
 
@@ -131,5 +190,15 @@ export async function sendPublicMessage(token, data) {
 
   emitNewMessage(messageDTO);
 
-  return messageDTO;
+  const botReply = await createBotReply({
+    room,
+    message: data.message,
+    customer: room.customer,
+  });
+
+  return {
+    message: messageDTO,
+    bot: botReply.botMessage,
+    botResult: botReply.botResult,
+  };
 }
