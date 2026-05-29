@@ -41,6 +41,10 @@ async function populateMessage(messageId) {
     .populate("attachments");
 }
 
+function canAccessSupportRoom(user) {
+  return ["ADMIN", "ATTENDANT", "TECHNICIAN"].includes(user.role);
+}
+
 export async function createRoom(
   data,
   userId
@@ -137,33 +141,39 @@ export async function createRoom(
   );
 }
 
-export async function listRooms(
-  userId
-) {
-  const rooms =
-    await ChatRoom.find({
-      participants: userId,
+export async function listRooms(user) {
+  const filter = {
+    isActive: true,
+  };
 
-      isActive: true,
-    })
-      .populate(
-        "participants",
-        "name email role"
-      )
-      .populate(
-        "createdBy",
-        "name email"
-      )
-      .populate(
-        "lastMessage"
-      )
-      .sort({
-        updatedAt: -1,
-      });
+  if (canAccessSupportRoom(user)) {
+    filter.$or = [
+      {
+        participants: user.id,
+      },
+      {
+        type: "SUPPORT",
+      },
+    ];
+  } else {
+    filter.participants = user.id;
+  }
 
-  return rooms.map(
-    chatRoomDTO
-  );
+  const rooms = await ChatRoom.find(filter)
+    .populate(
+      "participants",
+      "name email role"
+    )
+    .populate(
+      "createdBy",
+      "name email"
+    )
+    .populate("lastMessage")
+    .sort({
+      updatedAt: -1,
+    });
+
+  return rooms.map(chatRoomDTO);
 }
 
 export async function findRoomById(

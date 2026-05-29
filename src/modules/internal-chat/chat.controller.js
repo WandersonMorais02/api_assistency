@@ -22,10 +22,7 @@ export async function create(req, res, next) {
 
 export async function index(req, res, next) {
   try {
-    const rooms = await listRooms(
-      req.user.id
-    );
-
+    const rooms = await listRooms(req.user);
     return res.json(rooms);
   } catch (error) {
     return next(error);
