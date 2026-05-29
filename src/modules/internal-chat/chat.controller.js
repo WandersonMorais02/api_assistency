@@ -69,7 +69,7 @@ export async function indexMessages(
       await listMessages(
         req.params.id,
         req.query,
-        req.user.id
+        req.user
       );
 
     return res.json(messages);

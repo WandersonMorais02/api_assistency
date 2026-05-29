@@ -222,14 +222,25 @@ export async function sendMessage(
    * ============================
    */
 
-  const room =
-    await ChatRoom.findOne({
-      _id: data.room,
+  const roomFilter = {
+    _id: data.room,
+    isActive: true,
+  };
 
-      participants: userId,
+  if (canAccessSupportRoom(user)) {
+    roomFilter.$or = [
+      {
+        participants: userId,
+      },
+      {
+        type: "SUPPORT",
+      },
+    ];
+  } else {
+    roomFilter.participants = userId;
+  }
 
-      isActive: true,
-    });
+  const room = await ChatRoom.findOne(roomFilter);
 
   if (!room) {
     throw new AppError(
@@ -442,80 +453,60 @@ export async function sendMessage(
   };
 }
 
-export async function listMessages(
-  roomId,
-  query,
-  userId
-) {
-  const room =
-    await ChatRoom.findOne({
-      _id: roomId,
+export async function listMessages(roomId, query, user) {
+  const roomFilter = {
+    _id: roomId,
+    isActive: true,
+  };
 
-      participants: userId,
-
-      isActive: true,
-    });
-
-  if (!room) {
-    throw new AppError(
-      "Sala não encontrada",
-      404
-    );
+  if (canAccessSupportRoom(user)) {
+    roomFilter.$or = [
+      {
+        participants: user.id,
+      },
+      {
+        type: "SUPPORT",
+      },
+    ];
+  } else {
+    roomFilter.participants = user.id;
   }
 
-  const {
+  const room = await ChatRoom.findOne(roomFilter);
+
+  if (!room) {
+    throw new AppError("Sala não encontrada", 404);
+  }
+
+  const { page, limit, skip } = getPaginationParams(query);
+
+  const [data, total] = await Promise.all([
+    ChatMessage.find({
+      room: roomId,
+      isDeleted: false,
+    })
+      .populate("sender", "name email role")
+      .populate("attachments")
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit),
+
+    ChatMessage.countDocuments({
+      room: roomId,
+      isDeleted: false,
+    }),
+  ]);
+
+  const result = buildPaginationResponse({
+    data,
+    total,
     page,
     limit,
-    skip,
-  } =
-    getPaginationParams(
-      query
-    );
+  });
 
-  const [data, total] =
-    await Promise.all([
-      ChatMessage.find({
-        room: roomId,
-
-        isDeleted: false,
-      })
-        .populate(
-          "sender",
-          "name email role"
-        )
-        .populate(
-          "attachments"
-        )
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit),
-
-      ChatMessage.countDocuments(
-        {
-          room: roomId,
-
-          isDeleted: false,
-        }
-      ),
-    ]);
-
-  const result =
-    buildPaginationResponse({
-      data,
-
-      total,
-
-      page,
-
-      limit,
-    });
-
-  return paginatedDTO(
-    result,
-    chatMessageDTO
-  );
+  return paginatedDTO(result, chatMessageDTO);
 }
 
 export async function markMessageAsRead(
