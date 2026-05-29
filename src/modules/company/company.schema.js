@@ -1,22 +1,24 @@
 import { z } from "zod";
 
+const optionalString = z.string().optional().or(z.literal(""));
+
 const addressSchema = z
   .object({
-    street: z.string().optional(),
-    number: z.string().optional(),
-    neighborhood: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    zipCode: z.string().optional(),
+    street: optionalString,
+    number: optionalString,
+    neighborhood: optionalString,
+    city: optionalString,
+    state: optionalString,
+    zipCode: optionalString,
   })
   .optional();
 
 const socialLinksSchema = z
   .object({
-    instagram: z.string().optional(),
-    facebook: z.string().optional(),
-    tiktok: z.string().optional(),
-    website: z.string().optional(),
+    instagram: optionalString,
+    facebook: optionalString,
+    tiktok: optionalString,
+    website: optionalString,
   })
   .optional();
 
@@ -24,19 +26,19 @@ export const upsertCompanySchema = z.object({
   body: z.object({
     name: z.string().min(2, "Nome da assistência é obrigatório"),
 
-    document: z.string().optional(),
-    phone: z.string().optional(),
-    whatsapp: z.string().optional(),
+    document: optionalString,
+    phone: optionalString,
+    whatsapp: optionalString,
     email: z.string().email("E-mail inválido").optional().or(z.literal("")),
 
     address: addressSchema,
 
-    openingHours: z.string().optional(),
+    openingHours: optionalString,
 
-    logo: z.string().optional(),
+    logo: optionalString,
 
-    consentTerms: z.string().optional(),
-    warrantyPolicy: z.string().optional(),
+    consentTerms: optionalString,
+    warrantyPolicy: optionalString,
 
     socialLinks: socialLinksSchema,
 

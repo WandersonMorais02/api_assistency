@@ -47,33 +47,66 @@ companyRoutes.get("/", show);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
  *             properties:
  *               name:
  *                 type: string
- *                 example: Assistência Técnica XPTO
+ *                 example: Wantech Assistência Técnica
+ *               document:
+ *                 type: string
+ *                 example: "00.000.000/0001-00"
  *               email:
  *                 type: string
- *                 example: contato@empresa.com
+ *                 example: contato@wantech.space
  *               phone:
  *                 type: string
- *                 example: 92999999999
+ *                 example: "92999999999"
  *               whatsapp:
  *                 type: string
- *                 example: 92999999999
+ *                 example: "92999999999"
  *               address:
+ *                 type: object
+ *                 properties:
+ *                   street:
+ *                     type: string
+ *                     example: Av. Exemplo
+ *                   number:
+ *                     type: string
+ *                     example: "123"
+ *                   neighborhood:
+ *                     type: string
+ *                     example: Centro
+ *                   city:
+ *                     type: string
+ *                     example: Manaus
+ *                   state:
+ *                     type: string
+ *                     example: AM
+ *                   zipCode:
+ *                     type: string
+ *                     example: "69000000"
+ *               openingHours:
  *                 type: string
- *               city:
- *                 type: string
- *                 example: Manaus
- *               state:
- *                 type: string
- *                 example: AM
- *               zipCode:
- *                 type: string
+ *                 example: Segunda a sexta, 08h às 18h
  *               logo:
  *                 type: string
- *               description:
+ *                 description: ID do anexo da logo
+ *               consentTerms:
  *                 type: string
+ *               warrantyPolicy:
+ *                 type: string
+ *               socialLinks:
+ *                 type: object
+ *                 properties:
+ *                   instagram:
+ *                     type: string
+ *                   facebook:
+ *                     type: string
+ *                   tiktok:
+ *                     type: string
+ *                   website:
+ *                     type: string
  *               isActive:
  *                 type: boolean
  *                 example: true

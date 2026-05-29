@@ -26,6 +26,7 @@ function getDestinationFolder(context, category) {
     PRODUCT_IMAGE: "uploads/images/products",
     DEVICE_IMAGE: "uploads/images/devices",
     JOB_IMAGE: "uploads/images/jobs",
+    COMPANY_LOGO: "uploads/images/company",
 
     JOB_RESUME: "uploads/documents/job-resumes",
     CONSENT_DOCUMENT: "uploads/documents/consent-terms",
@@ -38,7 +39,6 @@ function getDestinationFolder(context, category) {
 
   return folders[context];
 }
-
 async function linkAttachmentToRelatedEntity({
   attachmentId,
   context,

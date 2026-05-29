@@ -50,6 +50,7 @@ const attachmentSchema = new mongoose.Schema(
         "CONSENT_AUDIO",
         "CONSENT_VIDEO",
         "SERVICE_ORDER_ATTACHMENT",
+        "COMPANY_LOGO",
       ],
       required: true,
     },

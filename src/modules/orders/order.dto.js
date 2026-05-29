@@ -21,6 +21,13 @@ const clientSchema = z
 const imageSchema = z.object({
   id: z.string(),
   url: z.string().optional(),
+  path: z.string().optional(),
+  filename: z.string().optional(),
+  originalName: z.string().optional(),
+  mimetype: z.string().optional(),
+  mimeType: z.string().optional(),
+  category: z.string().optional(),
+  context: z.string().optional(),
 });
 
 const productSchema = z
@@ -45,6 +52,19 @@ const itemSchema = z.object({
   subtotal: z.number(),
 });
 
+const shippingAddressSchema = z
+  .object({
+    zipCode: z.string().nullable().optional(),
+    street: z.string().nullable().optional(),
+    number: z.string().nullable().optional(),
+    complement: z.string().nullable().optional(),
+    neighborhood: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
+    state: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
 const orderOutputSchema = z.object({
   id: z.string(),
 
@@ -54,12 +74,20 @@ const orderOutputSchema = z.object({
   customerPhone: z.string().nullable().optional(),
   customerEmail: z.string().nullable().optional(),
 
+  shippingAddress: shippingAddressSchema,
+
   items: z.array(itemSchema),
 
   total: z.number(),
 
   status: z.string(),
   paymentStatus: z.string(),
+
+  gateway: z.string().nullable().optional(),
+  gatewayPreferenceId: z.string().nullable().optional(),
+  gatewayPaymentId: z.string().nullable().optional(),
+  checkoutUrl: z.string().nullable().optional(),
+  externalReference: z.string().nullable().optional(),
 
   notes: z.string().nullable().optional(),
 
@@ -87,6 +115,13 @@ function imageDTO(image) {
   return removeEmptyFields({
     id: toId(image),
     url: image.url,
+    path: image.path,
+    filename: image.filename,
+    originalName: image.originalName,
+    mimetype: image.mimetype || image.mimeType,
+    mimeType: image.mimeType || image.mimetype,
+    category: image.category,
+    context: image.context,
   });
 }
 
@@ -115,6 +150,20 @@ function itemDTO(item) {
   });
 }
 
+function shippingAddressDTO(address) {
+  if (!address) return null;
+
+  return removeEmptyFields({
+    zipCode: address.zipCode || null,
+    street: address.street || null,
+    number: address.number || null,
+    complement: address.complement || null,
+    neighborhood: address.neighborhood || null,
+    city: address.city || null,
+    state: address.state || null,
+  });
+}
+
 export function orderDTO(order) {
   if (!order) return null;
 
@@ -127,12 +176,20 @@ export function orderDTO(order) {
     customerPhone: order.customerPhone || null,
     customerEmail: order.customerEmail || null,
 
+    shippingAddress: shippingAddressDTO(order.shippingAddress),
+
     items: mapArray(order.items, itemDTO),
 
     total: order.total,
 
     status: order.status,
     paymentStatus: order.paymentStatus,
+
+    gateway: order.gateway || null,
+    gatewayPreferenceId: order.gatewayPreferenceId || null,
+    gatewayPaymentId: order.gatewayPaymentId || null,
+    checkoutUrl: order.checkoutUrl || null,
+    externalReference: order.externalReference || null,
 
     notes: order.notes || null,
 

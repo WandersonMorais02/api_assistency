@@ -2,16 +2,43 @@ import { z } from "zod";
 
 const conditionEnum = ["NEW", "USED", "REFURBISHED"];
 
+const optionalStringSchema = z
+  .string()
+  .optional()
+  .or(z.literal(""));
+
+const optionalNumberSchema = z.preprocess(
+  (value) => {
+    if (value === "" || value === null || value === undefined) {
+      return undefined;
+    }
+
+    return value;
+  },
+  z.coerce.number().min(0).optional()
+);
+
+const optionalIntegerSchema = z.preprocess(
+  (value) => {
+    if (value === "" || value === null || value === undefined) {
+      return undefined;
+    }
+
+    return value;
+  },
+  z.coerce.number().int().min(0).optional()
+);
+
 export const createProductSchema = z.object({
   body: z.object({
     name: z.string().min(2, "Nome precisa ter pelo menos 2 caracteres"),
-    description: z.string().optional().or(z.literal("")),
-    category: z.string().optional().or(z.literal("")),
+    description: optionalStringSchema,
+    category: optionalStringSchema,
 
     price: z.coerce.number().min(0, "Preço inválido"),
-    promotionalPrice: z.coerce.number().min(0).optional(),
+    promotionalPrice: optionalNumberSchema,
 
-    stock: z.coerce.number().int().min(0).optional(),
+    stock: optionalIntegerSchema,
 
     condition: z.enum(conditionEnum).optional(),
 
@@ -29,13 +56,13 @@ export const updateProductSchema = z.object({
 
   body: z.object({
     name: z.string().min(2).optional(),
-    description: z.string().optional().or(z.literal("")),
-    category: z.string().optional().or(z.literal("")),
+    description: optionalStringSchema,
+    category: optionalStringSchema,
 
-    price: z.coerce.number().min(0).optional(),
-    promotionalPrice: z.coerce.number().min(0).optional(),
+    price: optionalNumberSchema,
+    promotionalPrice: optionalNumberSchema,
 
-    stock: z.coerce.number().int().min(0).optional(),
+    stock: optionalIntegerSchema,
 
     condition: z.enum(conditionEnum).optional(),
 

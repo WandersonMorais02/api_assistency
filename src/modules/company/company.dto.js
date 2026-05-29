@@ -10,6 +10,9 @@ const logoSchema = z
   .object({
     id: z.string(),
     url: z.string().optional(),
+    path: z.string().optional(),
+    filename: z.string().optional(),
+    originalName: z.string().optional(),
     mimetype: z.string().optional(),
     category: z.string().optional(),
     context: z.string().optional(),
@@ -72,6 +75,9 @@ function logoDTO(logo) {
   return removeEmptyFields({
     id: toId(logo),
     url: logo.url,
+    path: logo.path,
+    filename: logo.filename,
+    originalName: logo.originalName,
     mimetype: logo.mimetype,
     category: logo.category,
     context: logo.context,
