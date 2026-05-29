@@ -19,6 +19,7 @@ import pdfRoutes from "../modules/pdfs/pdf.routes.js";
 import auditLogRoutes from "../modules/audit-logs/audit-log.routes.js";
 import chatRoutes from "../modules/internal-chat/chat.routes.js";
 import botRoutes from "../modules/bot/bot.routes.js";
+import publicChatRoutes from "../modules/public-chat/public-chat.routes.js";
 
 const routes = Router();
 
@@ -56,5 +57,6 @@ routes.use("/pdfs", pdfRoutes);
 routes.use("/audit-logs", auditLogRoutes);
 routes.use("/internal-chat", chatRoutes);
 routes.use("/bot", botRoutes);
+router.use("/public-chat", publicChatRoutes);
 
 export default routes;

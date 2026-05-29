@@ -28,7 +28,35 @@ const chatRoomSchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+    },
+
+    publicToken: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+
+    customer: {
+      name: {
+        type: String,
+        trim: true,
+      },
+      phone: {
+        type: String,
+        trim: true,
+      },
+      email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    },
+
+    status: {
+      type: String,
+      enum: ["OPEN", "WAITING", "CLOSED"],
+      default: "OPEN",
     },
 
     lastMessage: {
