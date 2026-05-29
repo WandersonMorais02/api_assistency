@@ -57,6 +57,6 @@ routes.use("/pdfs", pdfRoutes);
 routes.use("/audit-logs", auditLogRoutes);
 routes.use("/internal-chat", chatRoutes);
 routes.use("/bot", botRoutes);
-router.use("/public-chat", publicChatRoutes);
+routes.use("/public-chat", publicChatRoutes);
 
 export default routes;
